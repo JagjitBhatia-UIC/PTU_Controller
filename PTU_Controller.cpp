@@ -2,6 +2,8 @@
 
 PTU_Controller::PTU_Controller() {
     connected = false;
+    pos_x = -1;
+    pos_y = -1;
 
     if(PTU_Connect() > -1) {
         toOrigin();
@@ -10,6 +12,8 @@ PTU_Controller::PTU_Controller() {
 
 PTU_Controller::PTU_Controller(int _pos_x, int _pos_y) {
     connected = false;
+    pos_x = -1;
+    pos_y = -1;
 
     if(PTU_Connect() > -1) {
         move_abs(pos_x, pos_y);
@@ -25,6 +29,7 @@ int PTU_Controller::PTU_Connect() {
 
     if(flock(serial_port, LOCK_EX | LOCK_NB) == -1) {
         std::cout << "Serial port with file descriptor " << serial_port << " is already locked by another process." << std::endl;
+        return -1;
     }
 
     struct termios tty;
@@ -69,6 +74,8 @@ int PTU_Controller::PTU_Connect() {
     ptu_conn = serial_port;
     connected = true;
 
+    sleep(PTU_SERIAL_MAGIC_NUMBER);  // Sleep for "magic number" seconds before starting serial writes
+
     return 0;
 }
 
@@ -93,22 +100,22 @@ int PTU_Controller::pan_abs(int pos) {
 }
 
 int PTU_Controller::move_abs(int _pos_x, int _pos_y) {
-    if(_pos_x < 0 || _pos_x > MAX_POSITION) {
-        std::cout << "Invalid Pan Request!" << std::endl;
-        return -1;
-    }
-
-    if(_pos_y < 0 || _pos_y > MAX_POSITION) {
-        std::cout << "Invalid Tilt Request!" << std::endl;
-        return -1;
-    }
-
     if(connected) {
+        if(_pos_x < 0 || _pos_x > MAX_POSITION) {
+            std::cout << "Invalid Pan Request!" << std::endl;
+            return -1;
+        }
+
+        if(_pos_y < 0 || _pos_y > MAX_POSITION) {
+            std::cout << "Invalid Tilt Request!" << std::endl;
+            return -1;
+        }
+
         int tilt_low, tilt_high, pan_low, pan_high;
         QueryPacket query;
 
-        ToTwoBytes(pan, pan_low, pan_high);
-        ToTwoBytes(tilt, tilt_low, tilt_high);
+        ToTwoBytes(_pos_x, pan_low, pan_high);
+        ToTwoBytes(_pos_y, tilt_low, tilt_high);
 
         query.Tilt_High = tilt_high;
         query.Tilt_Low = tilt_low;
@@ -117,7 +124,11 @@ int PTU_Controller::move_abs(int _pos_x, int _pos_y) {
         query.OpCode = 0x08;
 
 
-        return PTU_SendCommand(ptu_conn, query);    
+        if(PTU_SendCommand(query) > -1) {
+            pos_x = _pos_x;
+            pos_y = _pos_y;
+            return 0;
+        }    
     }
 
     std::cout << "PTU Not Connected!" << std::endl;
@@ -132,8 +143,8 @@ int PTU_Controller::pan(int inc) {
     return pan_abs(pos_x + inc);
 }
 
-int PTU_Controller::move(int pan, int tilt) {
-    return move_abs(pos_x + pan, pos_y + tilt);
+int PTU_Controller::move(int _pan, int _tilt) {
+    return move_abs(pos_x + _pan, pos_y + _tilt);
 }
 
 void PTU_Controller::ToTwoBytes(unsigned long number, int &low, int &high) {
@@ -145,13 +156,17 @@ void PTU_Controller::ToTwoBytes(unsigned long number, int &low, int &high) {
     }
 }
 
-int PTU_Controller::PTU_SendCommand(int ptu_conn, QueryPacket cmd) {
+void PTU_Controller::SetDelayMS(int delay) {
+    rate_ms = delay;
+}
+
+int PTU_Controller::PTU_SendCommand(QueryPacket cmd) {
     char serialized_cmd[PTU_PACKET_SIZE_BYTES];
 
     serializeQueryPacket(cmd, serialized_cmd);
     int bytes_written = write(ptu_conn, serialized_cmd, sizeof(serialized_cmd));
     fsync(ptu_conn);
-    usleep(250000);
+    usleep(rate_ms * MS_TO_NS);
 
     if(bytes_written < PTU_PACKET_SIZE_BYTES) return -1;
 
@@ -176,4 +191,25 @@ void PTU_Controller::serializeQueryPacket(QueryPacket query, char (&cmd_packet)[
     cmd_packet[5] = b6;
     cmd_packet[6] = b7;
     cmd_packet[7] = b8;
+}
+
+void PTU_Controller::PrintState() {
+    std::cout << std::endl;
+
+    std::cout << "----PTU State----" << std::endl;
+    std::cout << std::endl;
+
+    std::cout << "Connected: " << connected << std::endl;
+    std::cout << std::endl;
+
+    std::cout << "Pan Position: " << pos_x << std::endl;
+    std::cout << std::endl;
+
+    std::cout << "Tilt Position: " << pos_y << std::endl;
+    std::cout << std::endl;
+
+    std::cout << "----------------" << std::endl;
+    
+    std::cout << std::endl;
+
 }

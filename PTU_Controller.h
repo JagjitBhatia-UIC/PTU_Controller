@@ -14,9 +14,13 @@
 
 #define ORIGIN_X 511
 #define ORIGIN_Y 511
-#define MAX_POSITION
+#define MAX_POSITION 1023
 
 #define PTU_PACKET_SIZE_BYTES 8
+#define PTU_SERIAL_MAGIC_NUMBER 7   // Magic number to sleep before starting PTU serial writes 
+
+#define DEFAULT_MSG_RATE_MS 500
+#define MS_TO_NS 1000
 
 typedef struct QueryPacket {
     int Tilt_High;
@@ -33,6 +37,7 @@ class PTU_Controller {
         int pos_y;
         int ptu_conn;
         bool connected;
+        int rate_ms = DEFAULT_MSG_RATE_MS;
 
         void serializeQueryPacket(QueryPacket query, char (&cmd_packet)[PTU_PACKET_SIZE_BYTES]);
         void ToTwoBytes(unsigned long number, int &low, int &high);
@@ -50,8 +55,10 @@ class PTU_Controller {
         int move_abs(int _pos_x, int _pos_y);
         int tilt(int inc);
         int pan(int inc);
-        int move(int pan, int tilt);
+        int move(int _pan, int _tilt);
+        void PrintState();
+        void SetDelayMS(int delay);
         
-}
+};
 
 #endif

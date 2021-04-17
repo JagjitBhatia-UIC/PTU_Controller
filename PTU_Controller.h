@@ -12,8 +12,9 @@
 #include <unistd.h> 
 #include <sys/file.h>
 
-#define ORIGIN_X 512
-#define ORIGIN_Y 512
+#define ORIGIN_X 511
+#define ORIGIN_Y 511
+#define MAX_POSITION
 
 #define PTU_PACKET_SIZE_BYTES 8
 

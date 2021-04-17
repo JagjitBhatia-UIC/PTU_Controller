@@ -24,8 +24,7 @@ int PTU_Controller::PTU_Connect() {
     int serial_port = open("/dev/ttyUSB0", O_RDWR);
 
     if(flock(serial_port, LOCK_EX | LOCK_NB) == -1) {
-        std::cout << ("Serial port with file descriptor " + 
-            std::to_string(serial_port) + " is already locked by another process.");
+        std::cout << "Serial port with file descriptor " << serial_port << " is already locked by another process." << std::endl;
     }
 
     struct termios tty;
@@ -94,12 +93,12 @@ int PTU_Controller::pan_abs(int pos) {
 }
 
 int PTU_Controller::move_abs(int _pos_x, int _pos_y) {
-    if(_pos_x < 0 || _pos_x > 1023) {
+    if(_pos_x < 0 || _pos_x > MAX_POSITION) {
         std::cout << "Invalid Pan Request!" << std::endl;
         return -1;
     }
 
-    if(_pos_y < 0 || _pos_y > 1023) {
+    if(_pos_y < 0 || _pos_y > MAX_POSITION) {
         std::cout << "Invalid Tilt Request!" << std::endl;
         return -1;
     }
@@ -160,14 +159,14 @@ int PTU_Controller::PTU_SendCommand(int ptu_conn, QueryPacket cmd) {
 }
 
 void PTU_Controller::serializeQueryPacket(QueryPacket query, char (&cmd_packet)[PTU_PACKET_SIZE_BYTES]) {
-    char b1 = 0xFF;
+    char b1 = 0xFF;  // Header - always 0xFF (255)
     char b2 = query.Pan_High;
     char b3 = query.Pan_Low;
     char b4 = query.Tilt_High;
     char b5 = query.Tilt_Low;
-    char b6 = 0x00;
+    char b6 = 0x00;  // Button value - always 0x00 (0)
     char b7 = query.OpCode;
-    char b8 = (255 - (b2 + b3 + b4 + b5 + b6 + b7) % 256);
+    char b8 = (255 - (b2 + b3 + b4 + b5 + b6 + b7) % 256);  // Compute checksum
   
     cmd_packet[0] = b1;
     cmd_packet[1] = b2;

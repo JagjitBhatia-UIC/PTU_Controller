@@ -5,4 +5,4 @@ This library assumes that the PhantomX PTU has the CommEXT.ino Arduino sketch lo
 
 The protocol used to develop this library is described in the [PhantomX Robot Turret Manual](https://www.trossenrobotics.com/productdocs/Interbotix_Robot_Turret_Manual.pdf).
 
-More information & updates to come!
+**More information & updates to come!**

@@ -16,7 +16,7 @@ PTU_Controller::PTU_Controller(int _pos_x, int _pos_y) {
     pos_y = -1;
 
     if(PTU_Connect() > -1) {
-        move_abs(pos_x, pos_y);
+        move_abs(_pos_x, _pos_y);
     }
 }
 
@@ -74,7 +74,7 @@ int PTU_Controller::PTU_Connect() {
     ptu_conn = serial_port;
     connected = true;
 
-    sleep(PTU_SERIAL_MAGIC_NUMBER);  // Sleep for "magic number" seconds before starting serial writes
+    sleep(PTU_SERIAL_MAGIC_NUMBER);  // Sleep for "magic number" seconds before enabling serial writes
 
     return 0;
 }

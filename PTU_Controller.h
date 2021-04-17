@@ -6,10 +6,10 @@
 #include <string.h>
 
 // Linux headers
-#include <fcntl.h> // Contains file controls like O_RDWR
-#include <errno.h> // Error integer and strerror() function
-#include <termios.h> // Contains POSIX terminal control definitions
-#include <unistd.h> // write(), read(), close()
+#include <fcntl.h> 
+#include <errno.h> 
+#include <termios.h> 
+#include <unistd.h> 
 #include <sys/file.h>
 
 #define ORIGIN_X 512
@@ -33,7 +33,7 @@ class PTU_Controller {
         int ptu_conn;
         bool connected;
 
-        void serializeQueryPacket(QueryPacket query, char (&cmd_packet)[8]);
+        void serializeQueryPacket(QueryPacket query, char (&cmd_packet)[PTU_PACKET_SIZE_BYTES]);
         void ToTwoBytes(unsigned long number, int &low, int &high);
         int PTU_SendCommand(QueryPacket cmd);
 

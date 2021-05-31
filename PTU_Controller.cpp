@@ -87,7 +87,10 @@ void PTU_Controller::PTU_Disconnect() {
 }
 
 int PTU_Controller::toOrigin() {
-    return move_abs(ORIGIN_X, ORIGIN_Y);
+    int ret = move_abs(ORIGIN_X, ORIGIN_Y);
+    pos_x = ORIGIN_X;
+    pos_y = ORIGIN_Y;
+    return ret;
 }
 
 
@@ -106,7 +109,7 @@ int PTU_Controller::move_abs(int _pos_x, int _pos_y) {
             return -1;
         }
 
-        if(_pos_y < 0 || _pos_y > MAX_POSITION) {
+        if(_pos_y < 530 || _pos_y > 610) {
             std::cout << "Invalid Tilt Request!" << std::endl;
             return -1;
         }
@@ -122,7 +125,6 @@ int PTU_Controller::move_abs(int _pos_x, int _pos_y) {
         query.Pan_High = pan_high;
         query.Pan_Low = pan_low;
         query.OpCode = 0x08;
-
 
         if(PTU_SendCommand(query) > -1) {
             pos_x = _pos_x;
@@ -181,6 +183,7 @@ void PTU_Controller::serializeQueryPacket(QueryPacket query, char (&cmd_packet)[
     char b5 = query.Tilt_Low;
     char b6 = 0x00;  // Button value - always 0x00 (0)
     char b7 = query.OpCode;
+    std::cout << b7 << std::endl;
     char b8 = (255 - (b2 + b3 + b4 + b5 + b6 + b7) % 256);  // Compute checksum
   
     cmd_packet[0] = b1;
@@ -191,6 +194,8 @@ void PTU_Controller::serializeQueryPacket(QueryPacket query, char (&cmd_packet)[
     cmd_packet[5] = b6;
     cmd_packet[6] = b7;
     cmd_packet[7] = b8;
+    
+    
 }
 
 void PTU_Controller::PrintState() {

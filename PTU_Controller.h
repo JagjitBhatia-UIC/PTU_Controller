@@ -11,9 +11,10 @@
 #include <termios.h> 
 #include <unistd.h> 
 #include <sys/file.h>
+#include <string>
 
 #define ORIGIN_X 511
-#define ORIGIN_Y 511
+#define ORIGIN_Y 530
 #define MAX_POSITION 1023
 
 #define PTU_PACKET_SIZE_BYTES 8

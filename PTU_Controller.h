@@ -1,17 +1,13 @@
 #ifndef PTU_CTRL_H
 #define PTU_CTRL_H
 
+#include "SerialAdapter.h"
+
 // C library headers
 #include <iostream>
 #include <string.h>
 
-// Linux headers
-#include <fcntl.h> 
-#include <errno.h> 
-#include <termios.h> 
-#include <unistd.h> 
-#include <sys/file.h>
-#include <string>
+
 
 #define ORIGIN_X 511
 #define ORIGIN_Y 530
@@ -36,9 +32,9 @@ class PTU_Controller {
     private:
         int pos_x;
         int pos_y;
-        int ptu_conn;
+        SerialAdapter ptu;
         bool connected;
-        int rate_ms = DEFAULT_MSG_RATE_MS;
+        int rate_ms;
 
         void serializeQueryPacket(QueryPacket query, char (&cmd_packet)[PTU_PACKET_SIZE_BYTES]);
         void ToTwoBytes(unsigned long number, int &low, int &high);

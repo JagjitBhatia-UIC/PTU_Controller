@@ -4,6 +4,7 @@ PTU_Controller::PTU_Controller() {
     connected = false;
     pos_x = -1;
     pos_y = -1;
+    rate_ms = DEFAULT_MSG_RATE_MS;
 
     if(PTU_Connect() > -1) {
         toOrigin();
@@ -14,6 +15,8 @@ PTU_Controller::PTU_Controller(int _pos_x, int _pos_y) {
     connected = false;
     pos_x = -1;
     pos_y = -1;
+    rate_ms = DEFAULT_MSG_RATE_MS;
+
 
     if(PTU_Connect() > -1) {
         move_abs(_pos_x, _pos_y);
@@ -25,55 +28,9 @@ PTU_Controller::~PTU_Controller() {
 }
 
 int PTU_Controller::PTU_Connect() {
-    int serial_port = open("/dev/ttyUSB0", O_RDWR);
-
-    if(flock(serial_port, LOCK_EX | LOCK_NB) == -1) {
-        std::cout << "Serial port with file descriptor " << serial_port << " is already locked by another process." << std::endl;
-        return -1;
-    }
-
-    struct termios tty;
-
-    if(tcgetattr(serial_port, &tty) != 0) {
-        printf("Error %i from tcgetattr: %s\n", errno, strerror(errno));
-        return -1;
-    }
-
-    tty.c_cflag &= ~PARENB; // Clear parity bit, disabling parity (most common)
-    tty.c_cflag &= ~CSTOPB; // Clear stop field, only one stop bit used in communication (most common)
-    tty.c_cflag &= ~CSIZE; // Clear all bits that set the data size 
-    tty.c_cflag |= CS8; // 8 bits per byte (most common)
-    tty.c_cflag &= ~CRTSCTS; // Disable RTS/CTS hardware flow control (most common)
-    tty.c_cflag |= CREAD | CLOCAL; // Turn on READ & ignore ctrl lines (CLOCAL = 1)
-
-    tty.c_lflag &= ~ICANON;
-    tty.c_lflag &= ~ECHO; // Disable echo
-    tty.c_lflag &= ~ECHOE; // Disable erasure
-    tty.c_lflag &= ~ECHONL; // Disable new-line echo
-    tty.c_lflag &= ~ISIG; // Disable interpretation of INTR, QUIT and SUSP
-    tty.c_iflag &= ~(IXON | IXOFF | IXANY); // Turn off s/w flow ctrl
-    tty.c_iflag &= ~(IGNBRK|BRKINT|PARMRK|ISTRIP|INLCR|IGNCR|ICRNL); // Disable any special handling of received bytes
-
-    tty.c_oflag &= ~OPOST; // Prevent special interpretation of output bytes (e.g. newline chars)
-    tty.c_oflag &= ~ONLCR; // Prevent conversion of newline to carriage return/line feed
-    // tty.c_oflag &= ~OXTABS; // Prevent conversion of tabs to spaces (NOT PRESENT ON LINUX)
-    // tty.c_oflag &= ~ONOEOT; // Prevent removal of C-d chars (0x004) in output (NOT PRESENT ON LINUX)
-
-    tty.c_cc[VTIME] = 10;    // Wait for up to 1s (10 deciseconds), returning as soon as any data is received.
-    tty.c_cc[VMIN] = 0;
-
-    cfsetispeed(&tty, B38400);
-    cfsetospeed(&tty, B38400);
-
-    // Save tty settings, also checking for error
-    if (tcsetattr(serial_port, TCSANOW, &tty) != 0) {
-        printf("Error %i from tcsetattr: %s\n", errno, strerror(errno));
-        return -1;
-    }
-
-    ptu_conn = serial_port;
-    connected = true;
-
+    ptu = SerialAdapter((char*) "/dev/ttyUSB0", O_RDWR, 9600);
+    if(ptu.isConnected()) connected = true;
+    else return -1;
     sleep(PTU_SERIAL_MAGIC_NUMBER);  // Sleep for "magic number" seconds before enabling serial writes
 
     return 0;
@@ -81,7 +38,7 @@ int PTU_Controller::PTU_Connect() {
 
 void PTU_Controller::PTU_Disconnect() {
     if(connected) {
-        close(ptu_conn);
+        ptu.disconnect();
         connected = false;
     }
 }
@@ -166,11 +123,8 @@ int PTU_Controller::PTU_SendCommand(QueryPacket cmd) {
     char serialized_cmd[PTU_PACKET_SIZE_BYTES];
 
     serializeQueryPacket(cmd, serialized_cmd);
-    int bytes_written = write(ptu_conn, serialized_cmd, sizeof(serialized_cmd));
-    fsync(ptu_conn);
+    if(!ptu.SerialWrite(serialized_cmd, sizeof(serialized_cmd))) return -1;
     usleep(rate_ms * MS_TO_NS);
-
-    if(bytes_written < PTU_PACKET_SIZE_BYTES) return -1;
 
     return 0;
 }
